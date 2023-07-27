@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:,">
+  <title>Minimal Atomics</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, avenir next, avenir, segoe ui, helvetica neue, helvetica, Cantarell, Ubuntu, roboto, noto, arial, sans-serif;
+      background: hsl(216deg 50% 90%);
+      color: hsl(216deg 50% 10%);
+      inline-size: min(720px, 100% - 16px);
+      margin-inline: auto;
+    }
+
+    header {
+      margin-block-start: clamp(8px, 10vb, 144px);
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Minimal Atomics</h1>
+  </header>
+
+  <main>
+    <label for="iterations">Iterations</label>
+    <input id="iterations" name="iterations" type="number" min="1" value="100000">
+
+    <div>
+      <button id="normal">Main thread only</button>
+      <p id="normal-output"></p>
+    </div>
+
+    <div>
+      <button id="workers-no-atomics">Workers (without Atomics)</button>
+      <p id="workers-no-atomics-output"></p>
+    </div>
+
+    <div>
+      <button id="workers-atomics">Workers (with Atomics)</button>
+      <p id="workers-atomics-output"></p>
+    </div>
+
+    <button id="test">Click</button>
+  </main>
+
+  <script>
+    document.querySelector('#test').addEventListener('click', e => {
+      const sab = new SharedArrayBuffer(8);
+      const arr = new BigInt64Array(sab);
+      Atomics.store(arr, 0, 100n);
+      const worker = new Worker('/worker.js');
+      worker.postMessage(sab);
+      setTimeout(() => Atomics.notify(arr, 0), 100);
+    })
+
+    const iterationsInput = document.querySelector('#iterations');
+
+    async function hash(iterations) {
+      let seed = new Uint8Array(64);
+      crypto.getRandomValues(seed);
+
+      for (let i = 0; i < iterations; i++) {
+        seed = await crypto.subtle.digest('SHA-512', seed);
+      }
+    }
+
+    document.querySelector('#normal').addEventListener('click', async () => {
+      const start = performance.now();
+      const iterations = Number(iterationsInput.value);
+      await hash(iterations);
+      const end = performance.now();
+      document.querySelector('#normal-output').textContent = end - start;
+    });
+
+    document.querySelector('#workers-no-atomics').addEventListener('click', async () => {
+      const start = performance.now();
+      const totalIterations = Number(iterationsInput.value);
+      const workerIterations = Math.floor(totalIterations / navigator.hardwareConcurrency);
+      let doneCount = 0;
+      for (let i = 0; i < navigator.hardwareConcurrency; i++) {
+        const worker = new Worker('/worker-no-atomics.js', { type: 'module' });
+        worker.postMessage(workerIterations);
+        worker.addEventListener('message', () => {
+          doneCount++;
+          if (doneCount === navigator.hardwareConcurrency) {
+            const end = performance.now();
+            document.querySelector('#workers-no-atomics-output').textContent = end - start;
+          }
+        });
+      }
+    });
+
+    document.querySelector('#workers-atomics').addEventListener('click', async () => {
+      const start = performance.now();
+      const totalIterations = Number(iterationsInput.value);
+      const workerIterations = BigInt(Math.floor(totalIterations / navigator.hardwareConcurrency));
+      let doneCount = 0;
+      for (let i = 0; i < navigator.hardwareConcurrency; i++) {
+        const sab = new SharedArrayBuffer(8);
+        const arr = new BigInt64Array(sab);
+        Atomics.store(arr, 0, workerIterations);
+        const worker = new Worker('/worker-with-atomics.js', { type: 'module' });
+        worker.postMessage(sab);
+        const wait = Atomics.waitAsync(arr, 0, workerIterations);
+        wait.value.then(() => {
+          doneCount++;
+          if (doneCount === navigator.hardwareConcurrency) {
+            const end = performance.now();
+            document.querySelector('#workers-atomics-output').textContent = end - start;
+          }
+        });
+      }
+    });
+  </script>
+</body>
+
+</html>
