@@ -44,20 +44,9 @@
       <button id="workers-atomics">Workers (with Atomics)</button>
       <p id="workers-atomics-output"></p>
     </div>
-
-    <button id="test">Click</button>
   </main>
 
   <script>
-    document.querySelector('#test').addEventListener('click', e => {
-      const sab = new SharedArrayBuffer(8);
-      const arr = new BigInt64Array(sab);
-      Atomics.store(arr, 0, 100n);
-      const worker = new Worker('/worker.js');
-      worker.postMessage(sab);
-      setTimeout(() => Atomics.notify(arr, 0), 100);
-    })
-
     const iterationsInput = document.querySelector('#iterations');
 
     async function hash(iterations) {
