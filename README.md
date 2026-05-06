@@ -2,6 +2,8 @@
 
 Minimal web app demonstrating the usage of [`Atomics`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Atomics) and [`SharedArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer) in JavaScript.
 
+Code repository mirrors: [GitHub](https://github.com/ardislu/minimal-atomics), [Codeberg](https://codeberg.org/ardislu/minimal-atomics), [git.ardis.lu](https://git.ardis.lu/minimal-atomics)
+
 ## Local development
 
 The website must be served in a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) to use [`SharedArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer). You can use [`local-web-server`](https://www.npmjs.com/package/local-web-server) to locally host the website with the required headers:
